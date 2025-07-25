@@ -1,1 +1,1 @@
-# apartment_booking
+# apartment-booking
