@@ -1,34 +1,35 @@
 require('dotenv').config();
-console.log('MONGO_URI =', process.env.MONGO_URI);
 const express = require('express');
 const mongoose = require('mongoose');
-const authRoutes = require('./routes/auth');
-const authMiddleware = require('./middleware/auth');
-// (άλλες routes θα μπουν παρακάτω)
 
 const app = express();
 app.use(express.json());
 
-// MongoDB σύνδεση
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true, useUnifiedTopology: true
-})
-.then(() => console.log('✔ MongoDB connected'))
-.catch(err => console.error('✖ MongoDB error:', err));
+const PORT = process.env.PORT || 8080;
+const MONGO_URI = process.env.MONGO_URI;
+mongoose.set('strictQuery', true); // optional
 
-// Auth endpoints (public)
-app.use('/api/auth', authRoutes);
+async function start() {
+  try {
+    await mongoose.connect(MONGO_URI, {
+      serverSelectionTimeoutMS: 5000,
+    });
+    console.log('✔ MongoDB connected');
 
-// Παράδειγμα προστατευμένου route
-app.get('/api/profile', authMiddleware, async (req, res) => {
-  // req.user.id περιέχει το ObjectId του χρήστη
-  const user = await require('./models/user').findById(req.user.id);
-  res.json({ id: user._id, name: user.name, email: user.email, role: user.role });
+    app.listen(PORT, () => {
+      console.log(`Server listening on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error('✖ MongoDB connection error:', err.message);
+    process.exit(1);
+  }
+}
+
+start();
+
+app.get('/health', (req, res) => {
+  const state = ['disconnected','connected','connecting','disconnecting'][mongoose.connection.readyState] || 'unknown';
+  res.json({ dbState: state });
 });
 
-// Health check
-app.get('/', (req, res) => res.send('Server is running!'));
-
-// Start server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
+app.use('/api/apartments', require('./routes/apartments'));
