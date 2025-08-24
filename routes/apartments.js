@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Apartment = require('../models/Apartment');
+const Apartment = require('../models/apartment');
 const auth = require('../middleware/auth');
 
 // 🔹 Λίστα όλων των διαμερισμάτων (public)

@@ -1,6 +1,6 @@
 // controllers/authController.js
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcryptjs'); 
 const User = require('../models/user');
 
 const JWT_ISSUER = 'your-app';
@@ -13,15 +13,15 @@ const signToken = (userId, role) => {
     throw new Error('Server misconfiguration: weak or missing JWT_SECRET');
   }
   return jwt.sign(
-    { sub: userId.toString(), role },
+    { id: userId.toString(), role },
     process.env.JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN, issuer: JWT_ISSUER, audience: JWT_AUDIENCE, algorithm: JWT_ALG }
+    { expiresIn: JWT_EXPIRES_IN }
   );
 };
 
 exports.register = async (req, res) => {
   try {
-    const { name, email, password } = req.body ?? {};
+    const { name, email, password } = req.body;
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'Name, email και password είναι υποχρεωτικά.' });
     }
@@ -55,25 +55,32 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body ?? {};
+    console.log('Login attempt:', { email, passwordLength: password?.length });
+    
     if (!email || !password) {
       return res.status(400).json({ error: 'Email και password είναι υποχρεωτικά.' });
     }
 
     const emailNorm = String(email).toLowerCase().trim();
     const user = await User.findOne({ email: emailNorm });
+    console.log('User found:', !!user);
+    
     if (!user) {
-      // Μην αποκαλύπτεις αν δεν υπάρχει
+      console.log('User not found for email:', emailNorm);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const ok = await bcrypt.compare(password, user.passwordHash);
+    console.log('Password match:', ok);
+    
     if (!ok) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const token = signToken(user._id, user.role || 'user');
+    const token = signToken(user._id, user.role || 'USER');
     return res.status(200).json({ message: 'Authenticated', token });
   } catch (err) {
+    console.error('Login error:', err);
     return res.status(500).json({ error: 'Κάτι πήγε στραβά.' });
   }
 };

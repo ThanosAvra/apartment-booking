@@ -15,7 +15,33 @@ router.get('/', auth(), async (req, res) => {
   }
 });
 
-// ➕ Δημιουργία κράτησης για συγκεκριμένο διαμέρισμα
+// ➕ Δημιουργία κράτησης
+router.post('/', auth(), async (req, res) => {
+  try {
+    const { apartmentId, startDate, endDate, totalPrice } = req.body;
+    const apartment = await Apartment.findById(apartmentId);
+    if (!apartment) return res.status(404).json({ error: 'Apartment not found' });
+
+    // Έλεγχος: δεν μπορείς να κλείσεις το δικό σου διαμέρισμα
+    if (apartment.owner.toString() === req.user.id) {
+      return res.status(403).json({ error: 'Cannot book your own apartment' });
+    }
+
+    const booking = await Booking.create({
+      user: req.user.id,
+      apartment: apartment._id,
+      startDate,
+      endDate,
+      totalPrice: totalPrice || 0
+    });
+
+    res.status(201).json(booking);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// ➕ Δημιουργία κράτησης για συγκεκριμένο διαμέρισμα (legacy route)
 router.post('/:apartmentId', auth(), async (req, res) => {
   try {
     const { startDate, endDate } = req.body;
